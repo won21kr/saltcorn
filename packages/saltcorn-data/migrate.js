@@ -3,7 +3,6 @@ const path = require("path");
 const db = require("./db");
 
 const dateFormat = require("dateformat");
-const { ifError } = require("assert");
 
 const migrate = async (schema0) => {
   const schema = schema0 || db.connectObj.default_schema;
@@ -54,6 +53,9 @@ const migrate = async (schema0) => {
       }
       if (contents.sql_sqlite && is_sqlite) {
         await execMany(contents.sql_sqlite);
+      }
+      if (contents.js) {
+        await contents.js();
       }
       await db.insert("_sc_migrations", { migration: name }, true);
     }
