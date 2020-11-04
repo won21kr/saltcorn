@@ -1,6 +1,8 @@
 const fs = require("fs");
 const path = require("path");
 const db = require("./db");
+const Table = require("./models/table");
+const Field = require("./models/field");
 
 const dateFormat = require("dateformat");
 
@@ -55,7 +57,9 @@ const migrate = async (schema0) => {
         await execMany(contents.sql_sqlite);
       }
       if (contents.js) {
-        await contents.js();
+        await db.runWithTenant(schema, async () => {
+          await contents.js({ Table, Field, schema });
+        });
       }
       await db.insert("_sc_migrations", { migration: name }, true);
     }

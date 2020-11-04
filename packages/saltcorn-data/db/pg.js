@@ -5,7 +5,10 @@ const { getTenantSchema } = require("./tenants");
 var connectObj = getConnectObject();
 
 var pool;
-if (connectObj) pool = new Pool(connectObj);
+if (connectObj) {
+  pool = new Pool(connectObj);
+  pool.on("error", (err) => console.error(err));
+}
 
 var log_sql_enabled = false;
 
