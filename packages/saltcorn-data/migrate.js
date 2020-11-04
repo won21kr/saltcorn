@@ -3,14 +3,7 @@ const path = require("path");
 const db = require("./db");
 
 const dateFormat = require("dateformat");
-const getClient = async (schema) => {
-  const client = db.isSQLite ? db : await db.getClient();
-  if (!db.isSQLite) {
-    db.sql_log(`SET search_path TO "${schema}";`);
-    await client.query(`SET search_path TO "${schema}";`);
-  }
-  return client;
-};
+
 const migrate = async (schema0) => {
   const schema = schema0 || db.connectObj.default_schema;
   //console.log("migrating",schema )
@@ -23,6 +16,12 @@ const migrate = async (schema0) => {
     .readdirSync(path.join(__dirname, "migrations"))
     .filter((file) => file.match(/\.js$/) !== null);
 
+  const client = is_sqlite ? db : await db.getClient();
+  if (!is_sqlite) {
+    db.sql_log(`SET search_path TO "${schema}";`);
+    await client.query(`SET search_path TO "${schema}";`);
+  }
+
   const fudge = is_sqlite
     ? (s) =>
         Array.isArray(s)
@@ -31,41 +30,37 @@ const migrate = async (schema0) => {
               .replace("id serial primary", "id integer primary")
               .replace("jsonb", "json")
     : (s) => s;
-  const execMany = async (client, sqls) => {
+  const execMany = async (sqls) => {
     if (Array.isArray(sqls)) {
       for (const sql of sqls) {
-        db.sql_log(sqls);
         await client.query(sql);
       }
     } else {
-      db.sql_log(sqls);
       return await client.query(sqls);
     }
   };
   for (const file of files) {
     const name = file.replace(".js", "");
     if (!dbmigrations.includes(name)) {
-      const client = await getClient(schema);
-
       //console.log("Running migration", name);
       const contents = require(path.join(__dirname, "migrations", name));
       if (contents.sql) {
         if (!(is_sqlite && contents.sql.includes("DROP COLUMN")))
-          await execMany(client, fudge(contents.sql));
+          await execMany(fudge(contents.sql));
       }
       if (contents.sql_pg && !is_sqlite) {
-        await execMany(client, contents.sql_pg);
+        await execMany(contents.sql_pg);
       }
       if (contents.sql_sqlite && is_sqlite) {
-        await execMany(client, contents.sql_sqlite);
+        await execMany(contents.sql_sqlite);
       }
       if (contents.js) {
         await contents.js();
       }
       await db.insert("_sc_migrations", { migration: name }, true);
-      if (!is_sqlite) client.release(true);
     }
   }
+  if (!is_sqlite) client.release(true);
 };
 
 const create_blank_migration = async () => {
