@@ -79,6 +79,10 @@ describe("mkWhere", () => {
       values: [8],
       where: "where id>=$1",
     });
+    expect(mkWhere({ id: { sql: "foo()" } })).toStrictEqual({
+      values: [],
+      where: "where id=foo()",
+    });
   });
 });
 

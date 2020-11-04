@@ -63,6 +63,8 @@ const whereClause = (is_sqlite, i) => ([k, v]) =>
       )}`
     : v === null
     ? `${sqlsanitizeAllowDots(k)} is null`
+    : v.sql
+    ? `${sqlsanitizeAllowDots(k)}=${v.sql}`
     : `${sqlsanitizeAllowDots(k)}=${placeHolder(is_sqlite, i())}`;
 
 const getVal = ([k, v]) =>
@@ -70,6 +72,8 @@ const getVal = ([k, v]) =>
     ? v.searchTerm
     : typeof (v || {}).in !== "undefined"
     ? v.in
+    : typeof (v || {}).sql !== "undefined"
+    ? null
     : typeof (v || {}).ilike !== "undefined"
     ? v.ilike
     : typeof (v || {}).lt !== "undefined"
